@@ -10,10 +10,10 @@ else
     exit 1
 fi
 
-if [ -f "$HOME/.profile" ]; then
-    ENTRY_SCRIPT=$HOME/.profile
-elif [ -f "$HOME/.bashrc" ]; then
+if [ -f "$HOME/.bashrc" ]; then
     ENTRY_SCRIPT=$HOME/.bashrc
+elif [ -f "$HOME/.profile" ]; then
+    ENTRY_SCRIPT=$HOME/.profile
 else
     echo "The current user does not have an env init script file"
     echo -e "\tSuch as ~/.profile and ~/.bashrc"
