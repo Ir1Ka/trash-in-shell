@@ -40,17 +40,22 @@ There are two ways to install the tool.
 Run the `install.sh` script to auto install.
 
 #### Manual installation
-Copy the file `trash` to your preferred location,
+Copy the file `trash` to your preferred location and name as `.trash_script`,
 such as you home directory,
 and then add follow shell code to your `~/.bashrc` or `~/.profile`.
+**Note**: `~/.bashrc` __FIRST__ and then `~/.profile`.
 
 ``` shell
-# include ~/trash if it exists
-if [ -f "$HOME/trash" ]; then
-    . "$HOME/trash"
+# include ~/.trash_script if it exists
+if [ -f "$HOME/.trash_script" ]; then
+    . "$HOME/.trash_script"
 fi
 ```
 
+## uninstall
+1. Delete file `~/.trash_script`
+2. Delete text as above code from your `~/.bashrc` or `~/.profile`
+
 ## NOTE
 1. If you want to use wildcard to restore files or directories,
-the parameter must wrapped in quotation marks (" " or ' ').
+the parameter __MUST__ wrapped in quotation marks (" " OR ' ').
