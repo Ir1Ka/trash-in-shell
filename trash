@@ -2,8 +2,8 @@ export TRASH_DIR=~/.trash
 if [ ! -d "${TRASH_DIR}" ]; then
     mkdir -p ${TRASH_DIR}
 fi
-alias rm=trash  
-#alias r=trash  
+alias rm=trash
+#alias r=trash
 alias rl=listtrash
 alias ur=undelfile
 alias cr=cleartrash
