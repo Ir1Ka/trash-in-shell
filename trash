@@ -1,0 +1,96 @@
+export TRASH_DIR=~/.trash
+if [ ! -d "${TRASH_DIR}" ]; then
+    mkdir -p ${TRASH_DIR}
+fi
+alias rm=trash  
+#alias r=trash  
+alias rl=listtrash
+alias ur=undelfile
+alias cr=cleartrash
+
+function trash()
+{
+    local filename
+    local i
+    local originfname
+    for i in $*; do
+        # convert to absolute path
+        originfname="$(cd "$(dirname "${i}")"; pwd)/$(basename "${i}")"
+        if [ "$?" != "0" ]; then
+            echo "${i} does not exist"
+            continue
+        fi
+        if [ ! -d "${i}" ] && [ ! -f "${i}" ] && [ ! -L "${i}" ]; then
+            echo "${i} is not exists"
+            continue
+        fi
+        filename=${TRASH_DIR}/${originfname//\//%}
+        mv -i ${originfname} ${filename}
+    done
+}
+
+function undelfile()
+{
+    local filename
+    local i
+    local originfname
+    local CUR=$(pwd)
+    for i in "${*}"; do
+        if [ "${i:0:1}" != "/" ]; then
+            i=${CUR}/${i}
+        fi
+        # convert to absolute path
+        originfname="$(cd "$(dirname "${i}")"; pwd)/$(basename "${i}")"
+        if [ "$?" != "0" ]; then
+            originfname=$(realpath "${i}")
+        fi
+        filename=${TRASH_DIR}/${originfname//\//%}
+        echo "${filename}" | grep -q '*'
+        if [ "$?" = "0" ]; then
+            local filename2
+            local j
+            for j in ${filename}; do
+                filename2=$(basename ${j})
+                filename2=${filename2//%/\/}
+                if [ ! -d ${j} ] && [ ! -f ${j} ] && [ ! -L "${j}" ]; then
+                    echo "${filename2} is not in trash"
+                    continue
+                fi
+                mv -i ${j} ${filename2}
+            done
+        else
+            if [ ! -d "${filename}" ] && [ ! -f "${filename}" ] && [ ! -L "${filename}" ]; then
+                echo "${i} is not in trash"
+                continue
+            fi
+            mv -i ${filename} ${i}
+        fi
+    done
+}
+
+function listtrash()
+{
+    local name
+    local realname
+    for name in ${TRASH_DIR}/*; do
+        if [ "$name" = "${TRASH_DIR}/*" ]; then
+            echo "trash is empty"
+            break
+        fi
+        realname=$(basename ${name})
+        realname=${realname//%/\/}
+        if [ -d "${name}" ]; then
+            echo -e "\033[36m${realname}\033[0m"
+        else
+            echo "${realname}"
+        fi
+    done
+}
+
+function cleartrash()
+{
+    read -p "clear sure? [y/N] " confirm
+     if [ "$confirm" == 'y' ] || [ "$confirm" == 'Y' ]; then
+         /bin/rm -rf ${TRASH_DIR}/.[!.]* ${TRASH_DIR}/*
+     fi
+}
