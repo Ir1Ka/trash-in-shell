@@ -22,13 +22,13 @@ It provides an extra layer of protection for console deletions.
 ## usage
 The tool provide commands: `rm`, `rl`, `ur` and `cr`.
 
-`rm`: the command alias system `rm` program,
+- `rm`: the command alias system `rm` program,
 and it only accepts files or directories to be deleted
 without parameters like the system `rm`.
-`rl`: list deleted files and directories.
-`ur`: restore deleted files or directories to original location,
+- `rl`: list deleted files and directories.
+- `ur`: restore deleted files or directories to original location,
 and the parameters like `rm`.
-`cr`: clear the trash.
+- `cr`: clear the trash.
 
 ## install
 There are two ways to install the tool.
@@ -53,4 +53,4 @@ fi
 
 ## NOTE
 1. If you want to use wildcard to restore files or directories,
-the parameter must wrapped in quotation marks ("" or '').
+the parameter must wrapped in quotation marks (" " or ' ').
