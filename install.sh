@@ -21,7 +21,7 @@ else
 fi
 
 echo '' >> $ENTRY_SCRIPT
-echo '# include ~/.trash if it exists' >> $ENTRY_SCRIPT
+echo '# include ~/.trash_script if it exists' >> $ENTRY_SCRIPT
 echo 'if [ -f "$HOME/.trash_script" ]; then' >> $ENTRY_SCRIPT
 echo '    . "$HOME/.trash_script"' >> $ENTRY_SCRIPT
 echo 'fi' >> $ENTRY_SCRIPT
