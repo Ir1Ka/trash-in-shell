@@ -1,10 +1,10 @@
 #! /usr/bin/env bash
 
 DIR=$(cd $(dirname $0); pwd)
-TRASH_TOOL=trash
+TRASH_TOOL=.trashrc
 
 if [ -f "$DIR/$TRASH_TOOL" ]; then
-    cp $DIR/$TRASH_TOOL $HOME/.${TRASH_TOOL}_script
+    cp $DIR/$TRASH_TOOL $HOME/
 else
     echo "$TRASH_TOOL is not exists"
     exit 1
@@ -21,7 +21,7 @@ else
 fi
 
 echo '' >> $ENTRY_SCRIPT
-echo '# include ~/.trash_script if it exists' >> $ENTRY_SCRIPT
-echo 'if [ -f "$HOME/.trash_script" ]; then' >> $ENTRY_SCRIPT
-echo '    . "$HOME/.trash_script"' >> $ENTRY_SCRIPT
+echo '# include ~/.trashrc if it exists' >> $ENTRY_SCRIPT
+echo 'if [ -f "$HOME/.trashrc" ]; then' >> $ENTRY_SCRIPT
+echo '    . "$HOME/.trashrc"' >> $ENTRY_SCRIPT
 echo 'fi' >> $ENTRY_SCRIPT
