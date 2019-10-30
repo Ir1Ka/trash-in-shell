@@ -21,14 +21,17 @@ function abspath()
     local dir_array=()
     local i=0
 
-    if [ "${relative_path:0:1}" != '/' ]; then
+    if [ x"${relative_path:0:1}" != x"/" ]; then
         relative_path="${CUR}/${relative_path}"
+    fi
+    if [ "${relative_path: -1:1}" != "/" ]; then
+        relative_path="${relative_path}/"
     fi
 
     while [ x"${relative_path}" != x"" ]; do
-        dir_array[${i}]=${relative_path%%/*}
-        relative_path=${relative_path#*/}
-        if [ x"${dir_array[${i}]}" == x"${relative_path}" ]; then
+        dir_array[${i}]="${relative_path%%/*}"
+        relative_path="${relative_path#*/}"
+        if [ x"${relative_path}" == x"" ]; then
             break
         fi
         let i++
@@ -39,9 +42,9 @@ function abspath()
     i="${#dir_array[@]}"
     while [ "${i}" -gt 0 ]; do
         let i--
-        if [ "${dir_array[${i}]}" == "." ] || [ x"${dir_array[${i}]}" == x"" ]; then
+        if [ x"${dir_array[${i}]}" == x"." ] || [ x"${dir_array[${i}]}" == x"" ]; then
             continue
-        elif [ "${dir_array[${i}]}" == ".." ]; then
+        elif [ x"${dir_array[${i}]}" == x".." ]; then
             let back_num++
             continue
         fi
@@ -52,8 +55,8 @@ function abspath()
         abs_path="${dir_array[${i}]}/${abs_path}"
     done
 
-    if [ "${1: -1:1}" != "/" ]; then
-        abs_path=${abs_path%\/}
+    if [ x"${1: -1:1}" != x"/" ]; then
+        abs_path="${abs_path%\/}"
     fi
     echo "/${abs_path}"
     return 0
