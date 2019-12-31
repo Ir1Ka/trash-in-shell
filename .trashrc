@@ -11,7 +11,7 @@ alias cr=cleartrash
 
 function abspath()
 {
-    if [ $# -ne 1 ]; then
+    if [ $# -ne 1 ] || [ ! -n "$1" ]; then
         echo "Only one parameter is required." 1>&2
         return 1
     fi
