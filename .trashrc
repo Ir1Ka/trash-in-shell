@@ -1,158 +1,194 @@
 #! /usr/bin/env bash
-export TRASH_DIR=~/.trash
-if [ ! -d "${TRASH_DIR}" ]; then
-    mkdir -p ${TRASH_DIR}
-fi
 alias rm=trash
 #alias r=trash
 alias rl=listtrash
 alias ur=undelfile
 alias cr=cleartrash
 
-function abspath()
+function nameintrash()
 {
     if [ $# -ne 1 ] || [ ! -n "$1" ]; then
         echo "Only one parameter is required." 1>&2
         return 1
     fi
 
-    local CUR="$(pwd)"
-    local relative_path=$1
-    local dir_array=()
-    local i=0
-
-    if [ x"${relative_path:0:1}" != x"/" ]; then
-        relative_path="${CUR}/${relative_path}"
+    local dir="$(realpath "$(dirname "$1")")"
+    if [ $? != 0 ]; then
+        return 1
     fi
-    if [ "${relative_path: -1:1}" != "/" ]; then
-        relative_path="${relative_path}/"
+    local name="$(basename "$1")"
+    local mountedon="$(df "${dir}" | tail -n1 | awk '{print $NF}')"
+    local trashdir="${mountedon}/.trash"
+
+    if [ ! -d "${trashdir}" ]; then
+        mkdir -p "${trashdir}"
+        if [ $? != 0 ]; then
+            return 1
+        fi
     fi
 
-    while [ x"${relative_path}" != x"" ]; do
-        dir_array[${i}]="${relative_path%%/*}"
-        relative_path="${relative_path#*/}"
-        if [ x"${relative_path}" == x"" ]; then
-            break
-        fi
-        let i++
-    done
+    dir="${dir//${mountedon}\//}"
 
-    local abs_path=""
-    local back_num=0
-    i="${#dir_array[@]}"
-    while [ "${i}" -gt 0 ]; do
-        let i--
-        if [ x"${dir_array[${i}]}" == x"." ] || [ x"${dir_array[${i}]}" == x"" ]; then
-            continue
-        elif [ x"${dir_array[${i}]}" == x".." ]; then
-            let back_num++
-            continue
-        fi
-        if [ "${back_num}" -gt 0 ]; then
-            let back_num--
-            continue
-        fi
-        abs_path="${dir_array[${i}]}/${abs_path}"
-    done
-
-    if [ x"${1: -1:1}" != x"/" ]; then
-        abs_path="${abs_path%\/}"
-    fi
-    echo "/${abs_path}"
+    echo "${trashdir}/${dir//\//%}%${name}"
     return 0
+}
+
+function checkfile()
+{
+    if [ $# -ne 1 ] || [ ! -n "$1" ]; then
+        echo "Only one parameter is required." 1>&2
+        return 1
+    fi
+
+    [ -d "$1" ] || [ -f "$1" ] || [ -L "$1" ]
 }
 
 function trash()
 {
-    local fname_in
     local fname
-    local fname_out
+    local fnameintrash
+
     for fname in "$@"; do
         if [ "${fname:0:1}" == "-" ]; then
             echo "${fname} is a invalid file or directory name" 1>&2
             continue
         fi
-        # convert to absolute path
-        fname_out=$(abspath "${fname}")
-        if [ "$?" != "0" ]; then
-            echo "Convert ${fname} to abspath failed" 1>&2
+        ## Don’t expand the ‘*’ because the shell has already been expanded.
+        ## If the ‘*’ appears here, it can be considered that the user explicitly wants to
+        ## use ‘*’ instead of a wildcard.
+        echo "${fname}" | grep -q '*'
+        if [ "$?" == "0" ]; then
+            echo "Do not support '*' in file or directory name: ${fname}" 1>&2
             continue
         fi
-        if [ ! -d "${fname}" ] && [ ! -f "${fname}" ] && [ ! -L "${fname}" ]; then
+        if ! checkfile "$fname"; then
             echo "${fname} is not exists" 1>&2
             continue
         fi
-        fname_in="${TRASH_DIR}"/"${fname_out//\//%}"
-        mv -i "${fname_out}" "${fname_in}"
+
+        fnameintrash=$(nameintrash "${fname}")
+        if [ "$?" != "0" ]; then
+            echo "Convert ${fname} to name in trash failed" 1>&2
+            continue
+        fi
+        mv -i "${fname}" "${fnameintrash}"
     done
 }
 
 function undelfile()
 {
-    local fname_in
     local fname
-    local fname_out
-    local dirname_out
+    local fnameintrash
+
     for fname in "$@"; do
         if [ "${fname:0:1}" == "-" ]; then
             echo "${1} is invalid file or directory name" 1>&2
             continue
         fi
-        fname_out="$(abspath "${fname}")"
-        fname_in="${TRASH_DIR}"/"${fname_out//\//%}"
-        echo "${fname_in}" | grep -q '*'
+        fnameintrash="$(nameintrash "${fname}")"
+        ## Here we need to expand the ‘*’, because the shell cannot be expanded
+        ## automatically when the file does not exist.
+        echo "${fname}" | grep -q '*'
         if [ "$?" == "0" ]; then
-            local SAVEIFS=$IFS
-            IFS=$(echo -en "\n\b")
-            local fname_out1
-            local fname_in1
-            for fname_in1 in ${fname_in}; do
-                fname_out1="$(basename ${fname_in1})"
-                fname_out1="${fname_out1//%/\/}"
-                if [ ! -d "${fname_in1}" ] && [ ! -f "${fname_in1}" ] && [ ! -L "${fname_in1}" ]; then
-                    echo "${fname_out1} is not in trash" 1>&2
+            #local SAVEIFS=$IFS
+            #IFS=$(echo -en "\n\b")
+            local __fname
+            local __fnameintrash
+
+            for __fnameintrash in ${fnameintrash}; do
+                local trashdir
+
+                trashdir="$(dirname ${__fnameintrash})"
+                __fname="$(basename ${__fnameintrash})"
+                __fname="$(dirname ${trashdir})/${__fname//%/\/}"
+                if ! checkfile "${__fnameintrash}"; then
+                    echo "${__fname} is not in trash" 1>&2
                     continue
                 fi
-                mv -i "${fname_in1}" "${fname_out1}"
+                mv -i "${__fnameintrash}" "${__fname}"
             done
-            IFS=$SAVEIFS
+
+            #IFS=$SAVEIFS
         else
-            if [ ! -d "${fname_in}" ] && [ ! -f "${fname_in}" ] && [ ! -L "${fname_in}" ]; then
+            if ! checkfile "${fnameintrash}"; then
                 echo "${fname} is not in trash" 1>&2
                 continue
             fi
-            dirname_out="$(dirname "${fname_out}")"
-            if [ ! -d "${dirname_out}" ]; then
-                mkdir -p "${dirname_out}"
-            fi
-            mv -i "${fname_in}" "${fname}"
+            mv -i "${fnameintrash}" "${fname}"
         fi
     done
 }
 
+function gettrashdirs()
+{
+    local trashdirs=()
+    local i=0
+
+    local f
+    for f in "$@"; do
+        ## Don’t expand the ‘*’ because the shell has already been expanded.
+        ## If the ‘*’ appears here, it can be considered that the user explicitly wants to
+        ## use ‘*’ instead of a wildcard.
+        echo "${f}" | grep -q '*'
+        if [ "$?" == "0" ]; then
+            echo "Do not support '*' in file or directory name: ${f}" 1>&2
+            continue
+        fi
+
+        if ! printf "%s\n" "${trashdirs[@]}" | grep "${f}" 1>/dev/null 2>&1; then
+            trashdirs[$i]="$(df "${f}" | tail -n1 | awk '{print $NF}')/.trash"
+            let i+=1
+        fi
+    done
+
+    if [ ${#trashdirs[@]} -eq 0 ]; then
+        trashdirs=($(df | sed '1d' | awk '{print $NF"/.trash"}' | xargs realpath 2>/dev/null))
+    fi
+
+    printf "%s\n" "${trashdirs[@]}"
+}
+
 function listtrash()
 {
-    local name
-    local realname
-    for name in "${TRASH_DIR}"/*; do
-        if [ "$name" = "${TRASH_DIR}/*" ]; then
-            echo "trash is empty"
-            break
+    local trashdirs=($(gettrashdirs "$@"))
+
+    local trashdir
+    for trashdir in "${trashdirs[@]}"; do
+        if [ ! -d "${trashdir}" ]; then
+            continue
         fi
-        realname="$(basename "${name}")"
-        realname="${realname//%/\/}"
-        if [ -d "${name}" ]; then
-            echo -e "\033[36m${realname}\033[0m"
-        else
-            echo "${realname}"
-        fi
+
+        local name
+        for name in "${trashdir}"/*; do
+            if [ "$name" = "${trashdir}/*" ]; then
+                echo "trash [${trashdir}] is empty"
+                continue
+            fi
+
+            local realname
+            realname="$(basename "$name")"
+            realname="$(dirname ${trashdir})/${realname//%/\/}"
+            if [ -d "${name}" ]; then
+                echo -e "\033[36m${realname}\033[0m"
+            else
+                echo "${realname}"
+            fi
+        done
     done
 }
 
 function cleartrash()
 {
+    local confirm
     read -p "clear sure? [y/N] " confirm
+
     if [ "$confirm" == 'y' ] || [ "$confirm" == 'Y' ]; then
-         /bin/rm -rf "${TRASH_DIR}"/.[!.]* "${TRASH_DIR}"/*
+        local trashdirs
+        local trashdir
+
+        trashdirs=($(gettrashdirs "$@"))
+        for trashdir in "${trashdirs[@]}"; do
+            /bin/rm -rf "${trashdir}"/.[!.]* "${trashdir}"/*
+        done
     fi
 }
