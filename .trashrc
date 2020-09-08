@@ -153,14 +153,13 @@ function gettrashdirs()
 function listtrash()
 {
     local trashdirs=($(gettrashdirs "$@"))
+    local found=0
 
     local trashdir
     for trashdir in "${trashdirs[@]}"; do
         if [ ! -d "${trashdir}" ]; then
             continue
         fi
-
-        local found=0
 
         local name
         for name in "${trashdir}"/.[!.]* "${trashdir}"/*; do
@@ -179,11 +178,11 @@ function listtrash()
             fi
             let found+=1
         done
-
-        if [ "${found}" -le 0 ]; then
-            echo "Trash of [$(dirname "${trashdir}")] is empty"
-        fi
     done
+
+    if [ "${found}" -le 0 ]; then
+        echo "All trash are empty!"
+    fi
 }
 
 function cleartrash()
