@@ -18,7 +18,7 @@ function nameintrash()
     fi
     local name="$(basename "$1")"
     local mountedon="$(df "${dir}" | tail -n1 | awk '{print $NF}')"
-    local trashdir="${mountedon}/.trash"
+    local trashdir="${mountedon}/.trash-$(id -u)"
 
     if [ ! -d "${trashdir}" ]; then
         mkdir -p "${trashdir}"
@@ -27,9 +27,13 @@ function nameintrash()
         fi
     fi
 
-    dir="${dir//${mountedon}\//}"
+    if [ "${mountedon}" == "${dir}" ]; then
+        echo "${trashdir}/${name}"
+    else
+        dir="${dir//${mountedon}\//}"
+        echo "${trashdir}/${dir//\//%}%${name}"
+    fi
 
-    echo "${trashdir}/${dir//\//%}%${name}"
     return 0
 }
 
@@ -90,8 +94,6 @@ function undelfile()
         ## automatically when the file does not exist.
         echo "${fname}" | grep -q '*'
         if [ "$?" == "0" ]; then
-            #local SAVEIFS=$IFS
-            #IFS=$(echo -en "\n\b")
             local __fname
             local __fnameintrash
 
@@ -107,8 +109,6 @@ function undelfile()
                 fi
                 mv -i "${__fnameintrash}" "${__fname}"
             done
-
-            #IFS=$SAVEIFS
         else
             if ! checkfile "${fnameintrash}"; then
                 echo "${fname} is not in trash" 1>&2
@@ -136,13 +136,15 @@ function gettrashdirs()
         fi
 
         if ! printf "%s\n" "${trashdirs[@]}" | grep "${f}" 1>/dev/null 2>&1; then
-            trashdirs[$i]="$(df "${f}" | tail -n1 | awk '{print $NF}')/.trash"
+            trashdirs[$i]="$(df "${f}" | tail -n1 | awk '{print $NF}')/.trash-$(id -u)"
             let i+=1
         fi
     done
 
     if [ ${#trashdirs[@]} -eq 0 ]; then
-        trashdirs=($(df | sed '1d' | awk '{print $NF"/.trash"}' | xargs realpath 2>/dev/null))
+        trashdirs=($(df | sed '1d' |    \
+                     awk "{print \$NF\"/.trash-$(id -u)\"}" |   \
+                     xargs realpath 2>/dev/null))
     fi
 
     printf "%s\n" "${trashdirs[@]}"
@@ -158,10 +160,12 @@ function listtrash()
             continue
         fi
 
+        local found=0
+
         local name
-        for name in "${trashdir}"/*; do
-            if [ "$name" = "${trashdir}/*" ]; then
-                echo "trash [${trashdir}] is empty"
+        for name in "${trashdir}"/.[!.]* "${trashdir}"/*; do
+            if [ "$name" = "${trashdir}/*" ] ||     \
+               [ "$name" = "${trashdir}/.[!.]*" ]; then
                 continue
             fi
 
@@ -173,7 +177,12 @@ function listtrash()
             else
                 echo "${realname}"
             fi
+            let found+=1
         done
+
+        if [ "${found}" -le 0 ]; then
+            echo "Trash of [$(dirname "${trashdir}")] is empty"
+        fi
     done
 }
 
